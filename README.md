@@ -1,2 +1,2 @@
 # Product-HeadshotPhotoEditor
-When a webhook is triggered on Airtable, the system reviews images with OpenAI to detect the focus (person, people, object, or objects). It generates new images via external services with prompts and the focus prompt, refines them based on Slack feedback, and updates the final results back into Airtable for a seamless workflow.
+Generate your own consistent character and product visuals automatically. This system generates new images via external services using prompts and a unique focus prompt, refines them based on Slack feedback, allows you to modify the prompts or generate videos from the selected images, and updates the final results back into Airtable for a seamless workflow.
