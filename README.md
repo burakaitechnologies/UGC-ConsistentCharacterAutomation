@@ -1,2 +1,2 @@
-# Product-HeadshotPhotoEditor
+# UGI-Consistent Character Video-Image Automation
 Generate your own consistent character and product visuals automatically. This system generates new images via external services using prompts and a unique focus prompt, refines them based on Slack feedback, allows you to modify the prompts or generate videos from the selected images, and updates the final results back into Airtable for a seamless workflow.
