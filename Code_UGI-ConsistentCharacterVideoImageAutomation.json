@@ -1,0 +1,2518 @@
+{
+  "name": "UGI-ConsistentCharacterVideoImageAutomation",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        784,
+        272
+      ],
+      "id": "b405884d-f7ef-462d-b120-641dae347e0a",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "VoHMb7O55rqzXqOK",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "=Describe everything you see on this image in one paragraph",
+        "imageUrls": "={{ $('Split Out Image').item.json.thumbnails.full.url }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        208,
+        160
+      ],
+      "id": "025b7365-ff03-465d-918b-89a4970854be",
+      "name": "Analyze Image",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "VoHMb7O55rqzXqOK",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Split Out Image').item.json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -176,
+        160
+      ],
+      "id": "1b73e44d-2669-494b-bbaf-5b1d82849ff8",
+      "name": "Download Image"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "['Picture ']",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        160
+      ],
+      "id": "6e66fa83-0ce2-48c9-8ec1-99653f98fb9b",
+      "name": "Split Out Image"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "data.image.url",
+              "renameField": true,
+              "outputFieldName": "image_url"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -64
+      ],
+      "id": "f3c740b3-4760-410e-8a52-5e324981d116",
+      "name": "Aggregate Image URL"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node - Convert image_urls array to formatted JSON string\nconst inputData = $input.first().json;\n\n// Get the image_urls array from the input (note: plural form)\nconst imageUrls = inputData.image_url || [];\n\n// Convert array to pretty formatted JSON string\nconst imageUrlsString = JSON.stringify(imageUrls, null, 4);\n\n// Return the formatted JSON string\nreturn [{ json: { image_url: imageUrlsString } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -64
+      ],
+      "id": "81f35120-05f4-4431-b650-e8d9edaae480",
+      "name": "Format Image URL"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "content",
+              "renameField": true,
+              "outputFieldName": "image_content"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        368,
+        160
+      ],
+      "id": "d0a98457-e306-43d3-992b-6f953e9e38ef",
+      "name": "Aggregate Image Analyze"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"google/nano-banana-edit\",\n  \"callBackUrl\": \"{{ $execution.resumeUrl }}\",\n  \"input\": {\n    \"prompt\": \"Core Subject:{{ $json['Core Subject'] }}, Setting:{{ $json.Setting }} Composition:{{ $json.Composition }}, Lighting:{{ $json.Lighting }}, Style:{{ $json.Style }}, Atmosphere:{{ $json.Atmosphere }}, Color Palette:{{ $json['Color Palette'] }}, Text Overlay:{{ $json['Text Overlay'] }}, Focus:{{ $json.Focus }}\",\n    \"image_urls\": {{ $('Merge Image URL-Image Prompt').all().slice(-1)[0].json.image_url }},\n    \"output_format\": \"png\",\n    \"image_size\": \"16:9\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        496
+      ],
+      "id": "4377e614-4ef6-4b64-bb8c-d55fab8bc5c4",
+      "name": "Image Generation Create Task"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "id": "7a7e0296-6ec3-4c93-b0d3-d6b7dc82e512",
+      "name": "Convert Photo to Base",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [
+        784,
+        768
+      ],
+      "typeVersion": 1,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C05V1QKC1MX",
+          "mode": "list",
+          "cachedResultName": "general"
+        },
+        "message": "={{ JSON.parse($('Wait for Results').item.json.body.data.resultJson).resultUrls[0] }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Determine the Next Step",
+              "fieldType": "radio",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Good, generate a video with it"
+                  },
+                  {
+                    "option": "Good, just keep it as image"
+                  },
+                  {
+                    "option": "Changes needed"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Make changes to the generated image in these fields",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Core Subject"
+                  },
+                  {
+                    "option": "Setting"
+                  },
+                  {
+                    "option": "Composition"
+                  },
+                  {
+                    "option": "Lighting"
+                  },
+                  {
+                    "option": "Style"
+                  },
+                  {
+                    "option": "Atmosphere"
+                  },
+                  {
+                    "option": "Color Palette"
+                  },
+                  {
+                    "option": "Text Overlay"
+                  },
+                  {
+                    "option": "Video Prompt"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Describe the changes to the generated image",
+              "fieldType": "textarea",
+              "placeholder": "Change this..."
+            }
+          ]
+        },
+        "options": {
+          "messageButtonLabel": "Approve",
+          "responseFormTitle": "",
+          "responseFormDescription": "Automation Form",
+          "responseFormButtonLabel": "Submit",
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        944,
+        1024
+      ],
+      "id": "e24dfdb3-a8e6-4c61-9a3e-7be598bdac67",
+      "name": "Send a message",
+      "webhookId": "f6eaa56b-1a64-4ac9-909f-ee5b65a997eb",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "LIxdHdcQr2GvcZ5W",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ JSON.parse($('Wait for Results').item.json.body.data.resultJson).resultUrls[0] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        608,
+        768
+      ],
+      "id": "104e630d-b33d-4f73-aece-a74e6d7cb793",
+      "name": "Download Generated Image"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://content.airtable.com/v0/appsQ9s2P11ot62dZ/{{ $('Get Record').item.json.id }}/Nano%20Image/uploadAttachment",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contentType\": \"image/png\",\n  \"file\": \"{{ $json.url }}\",\n  \"filename\": \"generated_image.png\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        768
+      ],
+      "id": "913b7f5f-bb35-4788-90eb-0a12c949fe88",
+      "name": "Airtable Generated Image Upload",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Uvfv8TWTGkCgvlum",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"focus\": \"focus_person\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        944,
+        272
+      ],
+      "id": "40dbc3f8-208d-48d1-99f1-721f278fbfdb",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Core Subject: {{ $json['Core Subject'] }}\nImage Description(s): {{ $('Aggregate Image Analyze').item.json.image_content }}\n\nSetting: {{ $json.Setting }}\nComposition: {{ $json.Composition }}\nLighting: {{ $json.Lighting }}\nStyle: {{ $json.Style }}\nAtmosphere: {{ $json.Atmosphere }}\nColor Palette: {{ $json['Color Palette'] }}\nText Overlay: {{ $json['Text Overlay'] }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are an AI agent that determines the correct *focus category* for generating system prompts.  \nYou will receive two inputs:  \n1. A user prompt describing what to generate.  \n2. A description of the provided image(s).  \n\nYour task:  \n- Carefully analyze the **user prompt first**.  \n- Decide if the prompt asks for the user themself, other people, an object, or multiple objects (or combinations) from the provided image(s) to also appear in the generated image.  \n- This decision is the **most important factor**.  \n- Use the image description only as **secondary support** if the prompt is unclear.  \n\nYou must strictly choose **exactly one** category from the list:  \n\n- `focus_person`  \n- `focus_people`  \n- `focus_object`  \n- `focus_objects`  \n- `focus_person_and_object`  \n- `focus_person_and_objects`  \n- `focus_people_and_object`  \n- `focus_people_and_objects`  \n- `focus_general`  \n\n**Rules:**  \n1. Always base your choice primarily on the user prompt.  \n2. Use the image description only if needed for clarification.  \n3. The output must be valid JSON in this exact format — no extra text, no explanations:  \n\n{\n  \"focus\": \"chosen_category\"\n}\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        800,
+        160
+      ],
+      "id": "63569624-cf78-4c22-9351-a85b1e36acbc",
+      "name": "Prompt Focus Determinator",
+      "alwaysOutputData": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the focus decision from System Prompt Determinator\nconst focusDecision = $('Prompt Focus Determinator').first().json.output.focus;\n\n// Get all the system prompts from the System Prompt node\nconst systemPrompts = $('Focus Prompts').first().json;\n\n// Find the matching system prompt based on the focus decision\nconst selectedPrompt = systemPrompts[focusDecision];\n\n// Replace all line breaks with \\n to remove line spaces\nconst formattedPrompt = selectedPrompt ? selectedPrompt.replace(/\\n/g, '\\\\n') : null;\n\n// Return the result\nreturn [\n  {\n    json: {\n      focus: focusDecision,\n      selected_prompt: formattedPrompt,\n      // Optional: include all available prompts for debugging\n      available_prompts: Object.keys(systemPrompts)\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        256
+      ],
+      "id": "1cca948d-5855-4e28-925b-62fd28905cfc",
+      "name": "Choose Focus Prompt"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        576,
+        1152
+      ],
+      "id": "854582f0-965c-41d9-901b-b2280aeeac05",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "VoHMb7O55rqzXqOK",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"Core Subject\": \"\",\n  \"Setting\": \"\",\n  \"Composition\": \"\",\n  \"Lighting\": \"\",\n  \"Style\": \"\",\n  \"Atmosphere\": \"\",\n  \"Color Palette\": \"\",\n  \"Text Overlay\": \"\",\n  \"Video Prompt\": \"\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        736,
+        1152
+      ],
+      "id": "d2e7691e-582d-4d3b-b054-5ff04ec0ac32",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Change requested fields: {{ $('Send a message').item.json.data['Make changes to the generated image in these fields'] }}\nChange description: {{ $('Send a message').item.json.data['Describe the changes to the generated image'] }}\n\nCurrent Fields:\nCore Subject: {{ $('Set Prompts').all().last().json['Core Subject'] }}\nSetting: {{ $('Set Prompts').all().last().json['Setting'] }}\nComposition: {{ $('Set Prompts').all().last().json['Composition'] }}\nLighting: {{ $('Set Prompts').all().last().json['Lighting'] }}\nStyle: {{ $('Set Prompts').all().last().json['Style'] }}\nAtmosphere: {{ $('Set Prompts').all().last().json['Atmosphere'] }}\nColor Palette: {{ $('Set Prompts').all().last().json['Color Palette'] }}\nText Overlay: {{ $('Set Prompts').all().last().json['Text Overlay'] }}\nVideo Prompt: {{ $('Set Prompts').all().last().json['Video Prompt'] }}\n\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an AI agent that updates the current fields based on the feedback you receive.  \nYou will receive:  \n- The current values of all fields (some may be empty).  \n- A list of fields requested to change.  \n- A description of what changes to make.  \n\nYour job is:  \n1. From the Current Fields, **only update the fields that are explicitly listed in the Change Requests**.  \n2. **It is an EXTREMELY CRITICAL RULE that every requested change must be fully applied and must include ALL details from the Change Description. Nothing can be left out. Nothing can be softened. Nothing can be skipped.**  \n3. If a requested field has no current value, create a new one based only on the Change Description.  \n4. For all fields **not listed in the Change Requests**, output an empty string.  \n5. When updating, always **emphasize the requested changes clearly and strongly** — highlight details, add intensity, and make the changes stand out in the new version.  \n6. Your highest priority is to guarantee that the Change Description is fully and faithfully reflected in the output.  \n7. Keep your output always in valid JSON format.  \n8. Always use this exact structure for output:  \n\n{\n  \"Core Subject\": \"\",\n  \"Setting\": \"\",\n  \"Composition\": \"\",\n  \"Lighting\": \"\",\n  \"Style\": \"\",\n  \"Atmosphere\": \"\",\n  \"Color Palette\": \"\",\n  \"Text Overlay\": \"\",\n  \"Video Prompt\": \"\"\n}\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        576,
+        1056
+      ],
+      "id": "203dc645-84c8-44b9-949c-64baf38ffc84",
+      "name": "Feedback Implementor"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appsQ9s2P11ot62dZ",
+          "mode": "list",
+          "cachedResultName": "ContentAutomationNanoBananaVeo3",
+          "cachedResultUrl": "https://airtable.com/appsQ9s2P11ot62dZ"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblyKjngIJIso9u2F",
+          "mode": "list",
+          "cachedResultName": "Ads",
+          "cachedResultUrl": "https://airtable.com/appsQ9s2P11ot62dZ/tblyKjngIJIso9u2F"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook to Airtable').item.json.query.recordId }}",
+            "Status": "Completed",
+            "Core Subject": "={{ $('Set Prompts').all().last().json['Core Subject'] }}",
+            "Setting": "={{ $('Set Prompts').all().last().json['Setting'] }}",
+            "Composition": "={{ $('Set Prompts').all().last().json['Composition'] }}",
+            "Lighting": "={{ $('Set Prompts').all().last().json['Lighting'] }}",
+            "Style": "={{ $('Set Prompts').all().last().json['Style'] }}",
+            "Atmosphere": "={{ $('Set Prompts').all().last().json['Atmosphere'] }}",
+            "Color Palette": "={{ $('Set Prompts').all().last().json['Color Palette'] }}",
+            "Text Overlay": "={{ $('Set Prompts').all().last().json['Text Overlay'] }}",
+            "Video Prompt": "={{ $('Set Prompts').all().last().json['Video Prompt'] }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Create",
+                  "value": "Create"
+                },
+                {
+                  "name": "Completed",
+                  "value": "Completed"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Core Subject",
+              "displayName": "Core Subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Setting",
+              "displayName": "Setting",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Composition",
+              "displayName": "Composition",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Lighting",
+              "displayName": "Lighting",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Style",
+              "displayName": "Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Atmosphere",
+              "displayName": "Atmosphere",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Color Palette",
+              "displayName": "Color Palette",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Text Overlay",
+              "displayName": "Text Overlay",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Video Prompt",
+              "displayName": "Video Prompt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Picture ",
+              "displayName": "Picture ",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Nano Image",
+              "displayName": "Nano Image",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Video",
+              "displayName": "Video",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Open URL",
+              "displayName": "Open URL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1488,
+        1056
+      ],
+      "id": "c5e8db14-8a4e-41b8-8ece-575fd9faef49",
+      "name": "Update Prompts",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Uvfv8TWTGkCgvlum",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "85282595-2cb6-47b5-8c54-0fb46f829f1f",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -320,
+        400
+      ],
+      "id": "a388cb63-8b7c-43ac-b276-05f7a6a5ec52",
+      "name": "Webhook to Airtable",
+      "webhookId": "85282595-2cb6-47b5-8c54-0fb46f829f1f"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cab520f7-2716-4b78-a318-8ed3cadcbb53",
+              "name": "image_url",
+              "value": "={{ $(\"Aggregate Image URL\").item.json.image_url }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        -64
+      ],
+      "id": "5699f9ff-5da0-4c6e-bbd3-02dd2b38a503",
+      "name": "Set Image URLs"
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1136,
+        496
+      ],
+      "id": "a4ec5175-15f4-47a6-b46f-4ec2e0dd11b6",
+      "name": "Wait for Results",
+      "webhookId": "90f096c1-369c-4b7d-9753-e159737c0199",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "43efca95-23f9-473c-a2df-d6464b50c801",
+              "name": "Core Subject",
+              "value": "={{ $('Set Prompts').all().last().json['Core Subject'] }}",
+              "type": "string"
+            },
+            {
+              "id": "cc9d914e-0297-45cf-a240-bacfc720edbd",
+              "name": "Setting",
+              "value": "={{ $('Set Prompts').all().last().json['Setting'] }}",
+              "type": "string"
+            },
+            {
+              "id": "fa27628b-767b-499f-bd4f-2b5ecf75e2b2",
+              "name": "Composition",
+              "value": "={{ $('Set Prompts').all().last().json['Composition'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e0f74cf7-eedd-40e3-8df2-ff150b0534f5",
+              "name": "Lighting",
+              "value": "={{ $('Set Prompts').all().last().json['Lighting'] }}",
+              "type": "string"
+            },
+            {
+              "id": "665e93fa-a895-42d4-894d-0b8ba3d084b6",
+              "name": "Style",
+              "value": "={{ $('Set Prompts').all().last().json['Style'] }}",
+              "type": "string"
+            },
+            {
+              "id": "9f6f21b5-0661-40b7-b954-e07ce9a0c9fc",
+              "name": "Atmosphere",
+              "value": "={{ $('Set Prompts').all().last().json['Atmosphere'] }}",
+              "type": "string"
+            },
+            {
+              "id": "445952a0-3f0c-48e0-81af-ec765106f616",
+              "name": "Color Palette",
+              "value": "={{ $('Set Prompts').all().last().json['Color Palette'] }}",
+              "type": "string"
+            },
+            {
+              "id": "5079aea9-d9ec-4886-a18b-1332c23a360f",
+              "name": "Text Overlay",
+              "value": "={{ $('Set Prompts').all().last().json['Text Overlay'] }}",
+              "type": "string"
+            },
+            {
+              "id": "21f77ef3-78e7-414f-a5b1-731b8ef53ef1",
+              "name": "Video Prompt",
+              "value": "={{ $('Set Prompts').all().last().json['Video Prompt'] }}",
+              "type": "string"
+            },
+            {
+              "id": "c329c3cd-c341-474d-9257-8bc285cd6c94",
+              "name": "Focus",
+              "value": "={{ $('Merge Image URL-Image Prompt').item.json.selected_prompt }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        608,
+        496
+      ],
+      "id": "cdab3eac-baa3-465f-bc3e-85a9785da656",
+      "name": "Get Prompts to Clean"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1424,
+        240
+      ],
+      "id": "8a1fc70c-afda-44f2-a313-eafde8a9b41c",
+      "name": "Merge Image URL-Image Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function to clean problematic characters from text\nfunction cleanText(text) {\n  if (!text || typeof text !== 'string') {\n    return text;\n  }\n  \n  return text\n    // Remove double periods\n    .replace(/\\.{2,}/g, '.')\n    // Replace em dashes with regular dashes\n    .replace(/—/g, '-')\n    // Replace percentage symbols in problematic contexts\n    .replace(/100%/g, '100 percent')\n    // Fix common typos\n    .replace(/PROVVIDED/g, 'PROVIDED')\n    .replace(/Athmosphere/g, 'Atmosphere')\n    // Clean up extra spaces after commas\n    .replace(/,\\s{2,}/g, ', ')\n    // Remove problematic parenthetical caps phrases\n    .replace(/\\(FACE MUST 100% MATCH[^)]*\\)/gi, '')\n    // Soften absolute language\n    .replace(/MUST 100% MATCH/gi, 'should closely match')\n    .replace(/100% accuracy/gi, 'high accuracy')\n    .replace(/absolute/gi, 'high')\n    .replace(/zero differences/gi, 'minimal differences')\n    .replace(/exactly the same/gi, 'very similar')\n    // Clean up multiple spaces\n    .replace(/\\s{2,}/g, ' ')\n    // Trim whitespace\n    .trim();\n}\n\n// Process all input items\nconst cleanedItems = [];\n\nfor (const item of $input.all()) {\n  const cleanedItem = {\n    json: {\n      'Focus': cleanText(item.json['Focus'] || item.json['Focus Prompt']), // Handle both field names\n      'Core Subject': cleanText(item.json['Core Subject']),\n      'Setting': cleanText(item.json['Setting']),\n      'Composition': cleanText(item.json['Composition']),\n      'Lighting': cleanText(item.json['Lighting']),\n      'Style': cleanText(item.json['Style']),\n      'Atmosphere': cleanText(item.json['Atmosphere']),\n      'Color Palette': cleanText(item.json['Color Palette']),\n      'Text Overlay': cleanText(item.json['Text Overlay']),\n      'Video Prompt': cleanText(item.json['Video Prompt'])\n    }\n  };\n  \n  cleanedItems.push(cleanedItem);\n}\n\nreturn cleanedItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        496
+      ],
+      "id": "29881a9f-3efb-488c-9779-3e2895941f7c",
+      "name": "Clean Formatting"
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "value": "appsQ9s2P11ot62dZ",
+          "mode": "list",
+          "cachedResultName": "ContentAutomationNanoBananaVeo3",
+          "cachedResultUrl": "https://airtable.com/appsQ9s2P11ot62dZ"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblyKjngIJIso9u2F",
+          "mode": "list",
+          "cachedResultName": "Ads",
+          "cachedResultUrl": "https://airtable.com/appsQ9s2P11ot62dZ/tblyKjngIJIso9u2F"
+        },
+        "id": "={{ $('Webhook to Airtable').item.json.query.recordId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        400
+      ],
+      "id": "6a4eb46d-ce41-435e-b0f4-81d07e9d11b3",
+      "name": "Get Record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Uvfv8TWTGkCgvlum",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "43efca95-23f9-473c-a2df-d6464b50c801",
+              "name": "Core Subject",
+              "value": "={{ (() => {\n  let feedback, record;\n  \n  try {\n    feedback = $('Feedback Implementor').item?.json.output['Core Subject'];\n  } catch {}\n  \n  try {\n    record = $('Get Record').item?.json['Core Subject'];\n  } catch {}\n  \n  return (feedback && feedback !== '') ? feedback : (record || '');\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "e734a804-225d-416a-9a23-4cc60c1e3247",
+              "name": "Setting",
+              "value": "={{ (() => {\n  let feedback, record;\n  \n  try {\n    feedback = $('Feedback Implementor').item?.json.output['Setting'];\n  } catch {}\n  \n  try {\n    record = $('Get Record').item?.json['Setting'];\n  } catch {}\n  \n  return (feedback && feedback !== '') ? feedback : (record || '');\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "e09d3f87-1857-4592-911f-8e1f7bd6ea47",
+              "name": "Composition",
+              "value": "={{ (() => {\n  let feedback, record;\n  \n  try {\n    feedback = $('Feedback Implementor').item?.json.output['Composition'];\n  } catch {}\n  \n  try {\n    record = $('Get Record').item?.json['Composition'];\n  } catch {}\n  \n  return (feedback && feedback !== '') ? feedback : (record || '');\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "10a16284-ba1f-4324-94d8-5c41a49f68ff",
+              "name": "Lighting",
+              "value": "={{ (() => {\n  let feedback, record;\n  \n  try {\n    feedback = $('Feedback Implementor').item?.json.output['Lighting'];\n  } catch {}\n  \n  try {\n    record = $('Get Record').item?.json['Lighting'];\n  } catch {}\n  \n  return (feedback && feedback !== '') ? feedback : (record || '');\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "d1cbbbf9-199d-4236-ba80-09ef69f3f050",
+              "name": "Style",
+              "value": "={{ (() => {\n  let feedback, record;\n  \n  try {\n    feedback = $('Feedback Implementor').item?.json.output['Style'];\n  } catch {}\n  \n  try {\n    record = $('Get Record').item?.json['Style'];\n  } catch {}\n  \n  return (feedback && feedback !== '') ? feedback : (record || '');\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "0827f409-a958-4296-9ed5-5a7abe4df660",
+              "name": "Atmosphere",
+              "value": "={{ (() => {\n  let feedback, record;\n  \n  try {\n    feedback = $('Feedback Implementor').item?.json['Atmosphere'];\n  } catch {}\n  \n  try {\n    record = $('Get Record').item?.json['Atmosphere'];\n  } catch {}\n  \n  return (feedback && feedback !== '') ? feedback : (record || '');\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "44aede55-0f4f-4508-83db-b99585ccff7f",
+              "name": "Color Palette",
+              "value": "={{ (() => {\n  let feedback, record;\n  \n  try {\n    feedback = $('Feedback Implementor').item?.json.output['Color Palette'];\n  } catch {}\n  \n  try {\n    record = $('Get Record').item?.json['Color Palette'];\n  } catch {}\n  \n  return (feedback && feedback !== '') ? feedback : (record || '');\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "9a2d22c0-755d-451c-86d2-9fa1d9e36ce5",
+              "name": "Text Overlay",
+              "value": "={{ (() => {\n  let feedback, record;\n  \n  try {\n    feedback = $('Feedback Implementor').item?.json.output['Text Overlay'];\n  } catch {}\n  \n  try {\n    record = $('Get Record').item?.json['Text Overlay'];\n  } catch {}\n  \n  return (feedback && feedback !== '') ? feedback : (record || '');\n})() }}",
+              "type": "string"
+            },
+            {
+              "id": "fe463c0c-ec48-4c99-ad1d-7ef013c145d1",
+              "name": "Video Prompt",
+              "value": "={{ (() => {\n  let feedback, record;\n  \n  try {\n    feedback = $('Feedback Implementor').item?.json.output['Video Prompt'];\n  } catch {}\n  \n  try {\n    record = $('Get Record').item?.json['Video Prompt'];\n  } catch {}\n  \n  return (feedback && feedback !== '') ? feedback : (record || '');\n})() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        160
+      ],
+      "id": "4097758e-e3f2-44f5-8d72-1446cb74256d",
+      "name": "Set Prompts"
+    },
+    {
+      "parameters": {
+        "content": "## Format Image URL for Prompt Generation\n",
+        "height": 208,
+        "width": 608,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        352,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "d07c1547-42fc-4d11-94c9-45fc2af9054e",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Get Prompts and Images",
+        "height": 240,
+        "width": 336,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -352,
+        336
+      ],
+      "typeVersion": 1,
+      "id": "718ea2a9-c7b0-4619-8b69-1c670b248f22",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Generate Image URL",
+        "height": 224,
+        "width": 496,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        96
+      ],
+      "typeVersion": 1,
+      "id": "fbc71ba7-17a1-4d28-b195-2d42610c5139",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Analyze Image",
+        "height": 224,
+        "width": 352,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        160,
+        96
+      ],
+      "typeVersion": 1,
+      "id": "3a5c92f1-a1ed-4b8f-8058-dfe9f42e5362",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Determine Focus",
+        "height": 304,
+        "width": 320,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        736,
+        96
+      ],
+      "typeVersion": 1,
+      "id": "3fa45d3d-7c26-43c4-b831-2a6c43d9e301",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Set Prompts",
+        "height": 224,
+        "width": 176,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        544,
+        96
+      ],
+      "typeVersion": 1,
+      "id": "1c1b24de-6af1-48ef-992a-a8094b019376",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "## Format Prompts",
+        "height": 240,
+        "width": 320,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        576,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "580e71f2-33d7-4455-b7aa-08dcdae1f638",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Get Feedback",
+        "height": 240,
+        "width": 224,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        896,
+        960
+      ],
+      "typeVersion": 1,
+      "id": "fc3fd00e-c200-424b-8e2f-23e8df8122a1",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## Update Prompts",
+        "height": 224,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1424,
+        992
+      ],
+      "typeVersion": 1,
+      "id": "1d305093-f468-4c12-ba55-623197795e01",
+      "name": "Sticky Note17"
+    },
+    {
+      "parameters": {
+        "content": "## Generate Image",
+        "height": 240,
+        "width": 336,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        912,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "51e1e037-6737-4d96-a5fa-e79cdd76b54f",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "content": "## Get and Format Generated Image",
+        "height": 224,
+        "width": 544,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        576,
+        704
+      ],
+      "typeVersion": 1,
+      "id": "46ccb981-e9b2-445c-9c15-66c24b53ab38",
+      "name": "Sticky Note19"
+    },
+    {
+      "parameters": {
+        "content": "## Prompts with Feedback",
+        "height": 272,
+        "width": 320,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        528,
+        960
+      ],
+      "typeVersion": 1,
+      "id": "a839e601-07b2-4a3c-9514-3b1dd7d894e6",
+      "name": "Sticky Note21"
+    },
+    {
+      "parameters": {
+        "content": "## Get Focus Prompt and Images",
+        "height": 304,
+        "width": 496,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1072,
+        96
+      ],
+      "typeVersion": 1,
+      "id": "ea9ed491-72bf-49f6-889f-da3d6bb03762",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Is Approved",
+        "height": 240,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1136,
+        960
+      ],
+      "typeVersion": 1,
+      "id": "46f504f7-008c-43e8-b1a5-fd1e0406d29c",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "content": "## Upload Image",
+        "height": 224,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1136,
+        704
+      ],
+      "typeVersion": 1,
+      "id": "25d85ceb-7bd8-4482-8c58-4fead4cc5306",
+      "name": "Sticky Note20"
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1920,
+        800
+      ],
+      "id": "43bc02ae-77ae-40f5-8437-382fe990a7f1",
+      "name": "Wait for Results1",
+      "webhookId": "90f096c1-369c-4b7d-9753-e159737c0199",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.imgbb.com/1/upload",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "expiration",
+              "value": "600"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -16,
+        160
+      ],
+      "id": "f529d5ff-46c5-43f4-ae5d-9c9e7bfe725e",
+      "name": "Generate Image URL with ImgBB",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "LGVC4lo3TEN8fXVF",
+          "name": "ImgBB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/veo/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $('Clean Formatting').item.json['Video Prompt'] }}\",\n  \"imageUrls\": [\n    \"{{ JSON.parse($('Wait for Results').item.json.body.data.resultJson).resultUrls[0] }}\"\n],\n  \"model\": \"veo3_fast\",\n  \"watermark\": \"MyBrand\",\n  \"callBackUrl\": \"{{ $execution.resumeUrl }}\",\n  \"aspectRatio\": \"16:9\",\n  \"seeds\": 12345,\n  \"enableFallback\": false,\n  \"enableTranslation\": true,\n  \"generationType\": \"REFERENCE_2_VIDEO\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1744,
+        800
+      ],
+      "id": "eed083c2-9912-4577-9d52-9c145596f112",
+      "name": "Video Generation Create Task"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data['Determine the Next Step'] }}",
+                    "rightValue": "Good, generate a video with it",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "852c9d28-2fc0-44fc-969e-742fe6d6b17b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Generate video"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "72701e4c-08ba-40db-b358-5992d85b93c1",
+                    "leftValue": "={{ $json.data['Determine the Next Step'] }}",
+                    "rightValue": "Good, just keep it as image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Keep the image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "832cb5e5-fd54-426b-b531-5cb2bb2764b3",
+                    "leftValue": "={{ $json.data['Determine the Next Step'] }}",
+                    "rightValue": "Changes needed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Make changes"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1152,
+        1008
+      ],
+      "id": "50a58712-a7ad-4d3c-b5f5-1c4c4bd8f60b",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b4da8da7-026b-4db3-a21f-c92d60eeb020",
+              "name": "focus_person",
+              "value": "The face must match the reference with absolute perfection—100% identical in structure, proportion, and expression. No guesses. No edits. No softness. Skin must show real texture, pores, flaws—never smoothed or fake. It must blend flawlessly with the lighting and color of the scene. Rules: 1) Face identity is sacred. 2) Skin realism is mandatory. 3) Natural harmony required. Zero exceptions. Zero forgiveness.",
+              "type": "string"
+            },
+            {
+              "id": "4357cff8-9195-405d-84cc-657bfe94776f",
+              "name": "focus_people",
+              "value": "Every face must be a perfect clone of its reference—no margin for error. Any deviation is failure. Preserve true texture, pores, and flaws. No smoothing. Each must fit naturally into the lighting and colors of the environment. Priorities: 1) Exact match. 2) Full realism. 3) Natural placement. Unbreakable rules. No exceptions.",
+              "type": "string"
+            },
+            {
+              "id": "3010d512-c2ee-433f-9935-14232ab20c63",
+              "name": "focus_object",
+              "value": "The object must be a flawless duplicate—shape, texture, detail, and reflection identical. No edits. No imagination. Material realism is non-negotiable. It must match the lighting and color of the scene perfectly. Priorities: 1) Perfect identity. 2) Real texture. 3) Seamless blend. Violate nothing.",
+              "type": "string"
+            },
+            {
+              "id": "bc4c8dc0-ce0f-4dd3-b85c-355815c30e89",
+              "name": "focus_objects",
+              "value": "Every object must mirror the reference exactly—no change allowed. Surfaces must stay real, textured, imperfect, and naturally lit. Rules: 1) Exact replication. 2) True realism. 3) Natural harmony. Zero tolerance for deviation.",
+              "type": "string"
+            },
+            {
+              "id": "6fc88107-9b4c-451a-99ad-40d05385e576",
+              "name": "focus_person_and_object",
+              "value": "The person and object must both be identical to their references—no differences, no excuses. Skin and material must look real, detailed, alive. Lighting, reflection, and color must align perfectly. Rules: 1) Exact match. 2) Raw realism. 3) Perfect environmental fit. No exceptions, ever.",
+              "type": "string"
+            },
+            {
+              "id": "d725dfae-9e3c-438c-85bd-d68643f60c3d",
+              "name": "focus_person_and_objects",
+              "value": "The person and all objects must match their references exactly. Nothing can differ. Realism in skin and material is absolute. Everything must blend flawlessly with the light and scene. Priorities: 1) Exact replication. 2) Real texture. 3) Natural fusion. Breach none.",
+              "type": "string"
+            },
+            {
+              "id": "fbb45c8d-247f-4cad-9c56-7b935d1c064a",
+              "name": "focus_people_and_object",
+              "value": "Every face and object must be 100% identical to the references—no variation, no creativity. Skin and materials must stay real, imperfect, textured. They must belong to the same light and space. Rules: 1) Perfect replication. 2) Realistic fidelity. 3) Seamless environment. Unbreakable.",
+              "type": "string"
+            },
+            {
+              "id": "b3ee8ca5-c8c5-4135-ad82-f1adf108c352",
+              "name": "focus_people_and_objects",
+              "value": "All faces and objects must be exact duplicates—no deviation tolerated. Texture, imperfections, and materials must be fully realistic. Every element must match the lighting and color truthfully. Rules: 1) Perfect identity. 2) Absolute realism. 3) True integration. No compromise.",
+              "type": "string"
+            },
+            {
+              "id": "e4116bc3-8352-4474-9b4e-3046a2f904c0",
+              "name": "focus_general",
+              "value": "Every visual element must match the reference with zero deviation. All details, colors, and textures must be exact. Realism is mandatory. Lighting and composition must look photographic. Rules: 1) Absolute replication. 2) Realistic fidelity. 3) Natural coherence. No errors. No mercy.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        208
+      ],
+      "id": "b66efea2-1a71-4240-83f2-b9f0fbf512be",
+      "name": "Focus Prompts"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appsQ9s2P11ot62dZ",
+          "mode": "list",
+          "cachedResultName": "ContentAutomationNanoBananaVeo3",
+          "cachedResultUrl": "https://airtable.com/appsQ9s2P11ot62dZ"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblyKjngIJIso9u2F",
+          "mode": "list",
+          "cachedResultName": "Ads",
+          "cachedResultUrl": "https://airtable.com/appsQ9s2P11ot62dZ/tblyKjngIJIso9u2F"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook to Airtable').item.json.query.recordId }}",
+            "Status": "Completed",
+            "Core Subject": "={{ $('Set Prompts').all().last().json['Core Subject'] }}",
+            "Setting": "={{ $('Set Prompts').all().last().json['Setting'] }}",
+            "Composition": "={{ $('Set Prompts').all().last().json['Composition'] }}",
+            "Lighting": "={{ $('Set Prompts').all().last().json['Lighting'] }}",
+            "Style": "={{ $('Set Prompts').all().last().json['Style'] }}",
+            "Atmosphere": "={{ $('Set Prompts').all().last().json['Atmosphere'] }}",
+            "Color Palette": "={{ $('Set Prompts').all().last().json['Color Palette'] }}",
+            "Text Overlay": "={{ $('Set Prompts').all().last().json['Text Overlay'] }}",
+            "Video Prompt": "={{ $('Set Prompts').all().last().json['Video Prompt'] }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Create",
+                  "value": "Create"
+                },
+                {
+                  "name": "Completed",
+                  "value": "Completed"
+                },
+                {
+                  "name": "Error",
+                  "value": "Error"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Core Subject",
+              "displayName": "Core Subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Setting",
+              "displayName": "Setting",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Composition",
+              "displayName": "Composition",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Lighting",
+              "displayName": "Lighting",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Style",
+              "displayName": "Style",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Atmosphere",
+              "displayName": "Atmosphere",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Color Palette",
+              "displayName": "Color Palette",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Text Overlay",
+              "displayName": "Text Overlay",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Video Prompt",
+              "displayName": "Video Prompt",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Picture ",
+              "displayName": "Picture ",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Nano Image",
+              "displayName": "Nano Image",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Video",
+              "displayName": "Video",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Open URL",
+              "displayName": "Open URL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1488,
+        800
+      ],
+      "id": "7c9a918d-4c84-4b50-9929-ab8efd053e24",
+      "name": "Update Prompts1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Uvfv8TWTGkCgvlum",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Update Prompts",
+        "height": 224,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1424,
+        736
+      ],
+      "typeVersion": 1,
+      "id": "a0634aaf-b51a-4ff3-9a76-dbb353b50ac1",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.data.info.resultUrls[0] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        1072
+      ],
+      "id": "998030cd-0860-4abb-bf12-77ca7b187dbd",
+      "name": "Download Generated Video"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "id": "99203c44-b455-47e9-9a56-cdb3562f13c5",
+      "name": "Convert Video to Base",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [
+        1936,
+        1072
+      ],
+      "typeVersion": 1,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst updatedItems = items.map((item) => {\n  const base64Url = item?.json?.data;\n  const url = `data:image/png;base64,${base64Url}`;\n  return { url };\n});\nreturn updatedItems;\n"
+      },
+      "id": "b8734401-3f76-48c3-b5a4-a7d76be6d035",
+      "name": "Format Generated Video Data URL",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2128,
+        1072
+      ],
+      "typeVersion": 2,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://content.airtable.com/v0/appsQ9s2P11ot62dZ/{{ $('Get Record').item.json.id }}/Video/uploadAttachment",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contentType\": \"video/mp4\",\n  \"file\": \"{{ $json.url }}\",\n  \"filename\": \"video.mp4\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2352,
+        1072
+      ],
+      "id": "048eaa6a-70b8-4877-91ab-97199f2fc145",
+      "name": "Airtable Generated Video Upload",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "Uvfv8TWTGkCgvlum",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst updatedItems = items.map((item) => {\n  const base64Url = item?.json?.data;\n  const url = `data:image/png;base64,${base64Url}`;\n  return { url };\n});\nreturn updatedItems;\n"
+      },
+      "id": "d4b7d908-cfa2-4886-9f7b-097be7fa72b9",
+      "name": "Format Generated Image Data URL",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        976,
+        768
+      ],
+      "typeVersion": 2,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "content": "## Get and Format Generated Image",
+        "height": 224,
+        "width": 592,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1696,
+        1008
+      ],
+      "typeVersion": 1,
+      "id": "2063d569-a445-432b-b06a-bac8ce9ecbbd",
+      "name": "Sticky Note22"
+    },
+    {
+      "parameters": {
+        "content": "## Upload Image",
+        "height": 224,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2304,
+        1008
+      ],
+      "typeVersion": 1,
+      "id": "c4491948-fa48-4b30-ad51-3acb8db658c8",
+      "name": "Sticky Note23"
+    },
+    {
+      "parameters": {
+        "content": "## Generate Video",
+        "height": 240,
+        "width": 336,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1696,
+        736
+      ],
+      "typeVersion": 1,
+      "id": "5ba28448-aca6-4ddc-99a8-53aace767c59",
+      "name": "Sticky Note24"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Image Generation Failed"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        480
+      ],
+      "id": "841293e8-ddc8-47d0-9c76-c3e5a893b05a",
+      "name": "Stop Workflow"
+    },
+    {
+      "parameters": {
+        "content": "## Failed",
+        "height": 192,
+        "width": 166,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1440,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "cc9e9fe2-9e37-467c-82a4-babeb5cd14e4",
+      "name": "Sticky Note18"
+    },
+    {
+      "parameters": {
+        "content": "## Is Failed",
+        "height": 240,
+        "width": 166
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1264,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "89eeab1d-24b2-4aff-a276-72fa683991c8",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b922bdca-ca52-40f9-9b93-dfb4d9faa88c",
+              "leftValue": "={{ $json.body.data.state }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1296,
+        496
+      ],
+      "id": "d2870715-ec67-4cda-a397-221d46d368f9",
+      "name": "Is Failed"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Image Generation Failed"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        784
+      ],
+      "id": "3edfd9ba-63df-4aa3-8e93-a7d931775b4c",
+      "name": "Stop Workflow1"
+    },
+    {
+      "parameters": {
+        "content": "## Failed",
+        "height": 192,
+        "width": 166,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2240,
+        736
+      ],
+      "typeVersion": 1,
+      "id": "d2d2aa5a-8340-4eaf-a8be-5561789f849d",
+      "name": "Sticky Note25"
+    },
+    {
+      "parameters": {
+        "content": "## Is Failed",
+        "height": 240,
+        "width": 166
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2064,
+        736
+      ],
+      "typeVersion": 1,
+      "id": "98af5857-8385-4e70-8c77-7e3757423c8e",
+      "name": "Sticky Note26"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b922bdca-ca52-40f9-9b93-dfb4d9faa88c",
+              "leftValue": "={{ $json.body.msg }}",
+              "rightValue": "Video generated successfully.",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2096,
+        800
+      ],
+      "id": "51a2801f-38cb-44f6-b79e-a928f6173b39",
+      "name": "Is Failed1"
+    }
+  ],
+  "pinData": {
+    "Wait for Results1": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.srv791111.hstgr.cloud",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36 Hutool",
+            "content-length": "1010",
+            "accept": "text/html,application/json,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "accept-encoding": "gzip, deflate",
+            "accept-language": "zh-CN,zh;q=0.8",
+            "cache-control": "no-cache",
+            "content-type": "application/json;charset=UTF-8",
+            "pragma": "no-cache",
+            "x-forwarded-for": "47.251.109.165",
+            "x-forwarded-host": "n8n.srv791111.hstgr.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "9d977e3685d3",
+            "x-real-ip": "47.251.109.165"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "code": 200,
+            "data": {
+              "fallbackFlag": false,
+              "info": {
+                "has_audio_list": [
+                  true
+                ],
+                "media_ids": [
+                  "CAUSJDMxMGZlMWU0LTMxZTItNDAyNC1hOGExLWFiMDI0ZmY1ODJiNhokYzczYzA1ZDQtYWI3Zi00MTE2LWIwY2MtYjJhM2ExNDA0ZTJhIgNDQUUqJGU3ODMwZGUzLWVlOWItNDQ4MC05ZTc4LThiYmFjN2Q2ZjE3OQ"
+                ],
+                "resolution": "720p",
+                "resultUrls": [
+                  "https://tempfile.aiquickdraw.com/s/72fb79ff-3626-4130-80cd-56581ee0feeb_watermarked.mp4"
+                ],
+                "result_urls": [
+                  "https://tempfile.aiquickdraw.com/s/72fb79ff-3626-4130-80cd-56581ee0feeb_watermarked.mp4"
+                ],
+                "seeds": [
+                  12345
+                ]
+              },
+              "promptJson": "{\"aspectRatio\":\"16:9\",\"callBackUrl\":\"https://n8n.srv791111.hstgr.cloud/webhook-waiting/4291\",\"enableFallback\":false,\"enableTranslation\":true,\"generationType\":\"REFERENCE_2_VIDEO\",\"imageUrls\":[\"https://tempfile.aiquickdraw.com/r/254f430a9a6893f41c267955bb28ff98_1761412430_fsrzfh3d.png\"],\"model\":\"veo3_fast\",\"prompt\":\"A dog playing in a park\",\"seeds\":12345,\"waterMark\":\"MyBrand\"}",
+              "taskId": "80927d469952654e2436264aba304ecb"
+            },
+            "msg": "Video generated successfully."
+          },
+          "webhookUrl": "https://n8n.srv791111.hstgr.cloud/webhook-test/90f096c1-369c-4b7d-9753-e159737c0199",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Prompt Focus Determinator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Image": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Image Analyze",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Generate Image URL with ImgBB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Image": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Image URL": {
+      "main": [
+        [
+          {
+            "node": "Set Image URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Image URL": {
+      "main": [
+        [
+          {
+            "node": "Merge Image URL-Image Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Image Analyze": {
+      "main": [
+        [
+          {
+            "node": "Set Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Generation Create Task": {
+      "main": [
+        [
+          {
+            "node": "Wait for Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Photo to Base": {
+      "main": [
+        [
+          {
+            "node": "Format Generated Image Data URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Generated Image": {
+      "main": [
+        [
+          {
+            "node": "Convert Photo to Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable Generated Image Upload": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Prompt Focus Determinator",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt Focus Determinator": {
+      "main": [
+        [
+          {
+            "node": "Focus Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose Focus Prompt": {
+      "main": [
+        [
+          {
+            "node": "Merge Image URL-Image Prompt",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Feedback Implementor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Feedback Implementor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Implementor": {
+      "main": [
+        [
+          {
+            "node": "Set Image URLs",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Prompts": {
+      "main": [
+        []
+      ]
+    },
+    "Webhook to Airtable": {
+      "main": [
+        [
+          {
+            "node": "Get Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Image URLs": {
+      "main": [
+        [
+          {
+            "node": "Format Image URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Results": {
+      "main": [
+        [
+          {
+            "node": "Is Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Prompts to Clean": {
+      "main": [
+        [
+          {
+            "node": "Clean Formatting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Image URL-Image Prompt": {
+      "main": [
+        [
+          {
+            "node": "Get Prompts to Clean",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Formatting": {
+      "main": [
+        [
+          {
+            "node": "Image Generation Create Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Record": {
+      "main": [
+        [
+          {
+            "node": "Split Out Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompts": {
+      "main": [
+        [
+          {
+            "node": "Prompt Focus Determinator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image URL with ImgBB": {
+      "main": [
+        [
+          {
+            "node": "Analyze Image",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Aggregate Image URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Generation Create Task": {
+      "main": [
+        [
+          {
+            "node": "Wait for Results1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Update Prompts1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Feedback Implementor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Results1": {
+      "main": [
+        [
+          {
+            "node": "Is Failed1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Focus Prompts": {
+      "main": [
+        [
+          {
+            "node": "Choose Focus Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Prompts1": {
+      "main": [
+        [
+          {
+            "node": "Video Generation Create Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Generated Video": {
+      "main": [
+        [
+          {
+            "node": "Convert Video to Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Video to Base": {
+      "main": [
+        [
+          {
+            "node": "Format Generated Video Data URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Generated Video Data URL": {
+      "main": [
+        [
+          {
+            "node": "Airtable Generated Video Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Generated Image Data URL": {
+      "main": [
+        [
+          {
+            "node": "Airtable Generated Image Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Failed": {
+      "main": [
+        [
+          {
+            "node": "Stop Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download Generated Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Failed1": {
+      "main": [
+        [
+          {
+            "node": "Stop Workflow1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download Generated Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3531323b-55f9-45ad-9749-33748232a012",
+  "meta": {
+    "instanceId": "4a2952d750233c02800975f682ffd82d00294fb62c8e98c152bd79f86550ccf2"
+  },
+  "id": "JOhwg7esB3G8Wc9M",
+  "tags": []
+}
